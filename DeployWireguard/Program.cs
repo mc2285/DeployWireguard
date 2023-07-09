@@ -25,7 +25,7 @@ There are no command line arguments, all input is provided via interactive promp
 No input is required if the config file is in the default location being $USERPROFILE\Desktop\cgof-vpn.conf
 ";
 
-        internal const string defaultAllowedIPs = "192.168.1.0/24";
+        internal const string defaultAllowedIPs = "192.168.1.0/24, 192.168.205.0/24";
 
         private static void Exit(int code)
         {
