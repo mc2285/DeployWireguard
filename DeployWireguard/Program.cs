@@ -25,7 +25,8 @@ There are no command line arguments, all input is provided via interactive promp
 No input is required if the config file is in the default location being $USERPROFILE\Desktop\cgof-vpn.conf
 ";
 
-        internal const string defaultAllowedIPs = "192.168.1.0/24, 192.168.205.0/24";
+        internal const string defaultAllowedIPs = "192.168.1.0/24, 192.168.15.0/24, 192.168.205.0/24";
+        internal static string defaultEndpoint = "";
 
         private static void Exit(int code)
         {
@@ -36,13 +37,27 @@ No input is required if the config file is in the default location being $USERPR
 
         static void Main(string[] args)
         {
-            // Respond to desperate help requests
             if (args.Length > 0)
             {
+                // Respond to desperate help requests
                 if (args[0] == "-h" || args[0] == "--help" || args[0] == "/?")
                 {
                     Console.WriteLine(description);
                     Environment.Exit(2);
+                }
+                else if (args[0].Contains(":"))
+                {
+                    bool _result = int.TryParse(args[0].Split(':')[1], out int _);
+                    if (!_result)
+                    {
+                        Console.WriteLine("Invalid argument: {0}", args[0]);
+                        Console.WriteLine("Port number has to be an integer.");
+                        Exit(1);
+                    }
+                    else
+                    {
+                        defaultEndpoint = args[0];
+                    }
                 }
             }
 
@@ -159,6 +174,12 @@ No input is required if the config file is in the default location being $USERPR
 
             // Replace AllowedIPs with required values
             configData["Peer"]["AllowedIPs"] = defaultAllowedIPs;
+
+            // Replace Endpoint with required value if provided as a command line argument
+            if (defaultEndpoint != "")
+            {
+                configData["Peer"]["Endpoint"] = defaultEndpoint;
+            }
 
             // Write the resulting config file to the target location
             try
