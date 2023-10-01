@@ -1,6 +1,7 @@
 ﻿using IniParser.Exceptions;
 using IniParser.Model;
 using IniParser.Parser;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -121,6 +122,28 @@ No input is required if the config file is in the default location being $USERPR
                 Exit(1);
             }
 
+            // Check if the registry key allowing access from Network Configuration Operators exists
+            // And add it if it doesn't
+            string _regKey = @"Software\WireGuard";
+            RegistryKey _key = Registry.LocalMachine.OpenSubKey(_regKey, true);
+            if (_key == null)
+            {
+                Console.WriteLine("Creating registry key: {0}", _regKey);
+                _key = Registry.LocalMachine.CreateSubKey(_regKey);
+            }
+            object _value = _key.GetValue("LimitedOperatorUI");
+            if (_value == null)
+            {
+                Console.WriteLine("Creating registry key: {0}", _regKey + "\\LimitedOperatorUI");
+                _key.SetValue("LimitedOperatorUI", 1, RegistryValueKind.DWord);
+            }
+            else
+            {
+                Console.WriteLine("Registry key already exists: {0}", _regKey + "\\LimitedOperatorUI");
+                Console.WriteLine("Value: {0}", _value);
+            }
+            _key.Close();
+
             // Block until a satisfactory config file is provided or the program is terminated
             string _tempInput;
             string _fallbackInput = sourcePath;
@@ -240,7 +263,7 @@ No input is required if the config file is in the default location being $USERPR
                 Console.WriteLine("Error calling wireguard.exe: {0}", e.Message);
                 Exit(1);
             }
-            
+
             // Check for exit code and exit the app
             if (_wgExeProcess.ExitCode == 0)
             {
@@ -250,7 +273,7 @@ No input is required if the config file is in the default location being $USERPR
             else
             {
                 Console.WriteLine("Error deploying tunnel. Exit code: {0}", _wgExeProcess.ExitCode);
-                Exit(1);    
+                Exit(1);
             }
         }
     }
