@@ -13,7 +13,7 @@ namespace DeployWireguard
         public const string description =
 
 @"
-This is a part of an MDT task sequence that deploys Wireguard to a Windows 10 machine.
+This is a part of an MDT task sequence that deploys Wireguard to a Windows 10+ machine.
 
 It performs the following actions (MSI is installed in a previous step):
     1. Grab the config file from either the default path or the one provided via interactive prompt
@@ -22,50 +22,76 @@ It performs the following actions (MSI is installed in a previous step):
 
 The exit code is 0 on success, 1 on failure and 2 on help request.
 
-There are no command line arguments, all input is provided via interactive prompts.
 No input is required if the config file is in the default location being $USERPROFILE\Desktop\cgof-vpn.conf
+
+Positional command line arguments (optional):
+    1. Endpoint in the format of hostname:port (will override the value in the base config file if specified)
+    2. Path to the config file in the format of C:\path\to\config\file.conf
+
+If both arguments are specified, the application operates in a non-interactive manner.
 ";
 
         internal const string defaultAllowedIPs = "192.168.1.0/24, 192.168.15.0/24, 192.168.205.0/24";
         internal static string defaultEndpoint = "";
+        internal static bool interactive = true;
 
         private static void Exit(int code)
         {
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            if (interactive)
+            {
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+            }
             Environment.Exit(code);
         }
 
         static void Main(string[] args)
         {
+            string _configPath = @"WireGuard\Data\Configurations\";
+            string _configName = @"cgof-vpn.conf";
+            string _resultingConfigNane = @"cgof-vpn.conf.dpapi";
+            string _rawConfigPath = @"Desktop\";
+
+
             if (args.Length > 0)
             {
                 // Respond to desperate help requests
                 if (args[0] == "-h" || args[0] == "--help" || args[0] == "/?")
                 {
                     Console.WriteLine(description);
-                    Environment.Exit(2);
+                    Exit(2);
                 }
-                else if (args[0].Contains(":"))
+                if (!args[0].Contains(":"))
                 {
-                    bool _result = int.TryParse(args[0].Split(':')[1], out int _);
-                    if (!_result)
-                    {
-                        Console.WriteLine("Invalid argument: {0}", args[0]);
-                        Console.WriteLine("Port number has to be an integer.");
-                        Exit(1);
-                    }
-                    else
-                    {
-                        defaultEndpoint = args[0];
-                    }
+                    Console.WriteLine("Invalid argument: {0}", args[0]);
+                    Console.WriteLine("Endpoint has to be in the format of hostname:port.");
+                    Exit(1);
+                }
+                bool _result = int.TryParse(args[0].Split(':')[1], out int _);
+                if (!_result)
+                {
+                    Console.WriteLine("Invalid argument: {0}", args[0]);
+                    Console.WriteLine("Port number has to be an integer.");
+                    Exit(1);
+                }
+                else
+                {
+                    defaultEndpoint = args[0];
                 }
             }
-
-            string _configPath = @"WireGuard\Data\Configurations\";
-            string _configName = @"cgof-vpn.conf";
-            string _resultingConfigNane = @"cgof-vpn.conf.dpapi";
-            string _rawConfigPath = @"Desktop\";
+            if (args.Length > 1)
+            {
+                if (!File.Exists(args[1]))
+                {
+                    Console.WriteLine("Invalid argument: {0}", args[1]);
+                    Console.WriteLine("Config file does not exist.");
+                    Exit(1);
+                }
+                else
+                {
+                    interactive = false;
+                }
+            }
 
 
             // Query environment variables for the location of ProgramFiles
@@ -76,27 +102,47 @@ No input is required if the config file is in the default location being $USERPR
             if (_envProgramFiles == null)
             {
                 Console.WriteLine("PROGRAMFILES environment variable not found.");
-                Exit(1);
+                if (interactive)
+                {
+                    Exit(1);
+                }
+                else
+                {
+                    string _defaultProgramFiles = @"C:\Program Files";
+                    Console.WriteLine("Using default path: {0}", _defaultProgramFiles);
+                    _configPath = Path.Combine(_defaultProgramFiles, _configPath);
+                }
             }
             else
             {
                 _configPath = Path.Combine(_envProgramFiles, _configPath);
             }
 
-            // Query environment variables for the location of the user's home directory
-            _envUserprofile = Environment.GetEnvironmentVariable("USERPROFILE");
-            if (_envUserprofile == null)
+            if (interactive)
             {
-                Console.WriteLine("USERPROFILE environment variable not found.");
-                Exit(1);
-            }
-            else
-            {
-                _rawConfigPath = Path.Combine(_envUserprofile, _rawConfigPath);
+                // Query environment variables for the location of the user's home directory
+                _envUserprofile = Environment.GetEnvironmentVariable("USERPROFILE");
+                if (_envUserprofile == null)
+                {
+                    Console.WriteLine("USERPROFILE environment variable not found.");
+                    Exit(1);
+                }
+                else
+                {
+                    _rawConfigPath = Path.Combine(_envUserprofile, _rawConfigPath);
+                }
             }
 
             // Build target, source and resulting paths
-            string sourcePath = Path.Combine(_rawConfigPath, _configName);
+            string sourcePath;
+            if (interactive)
+            {
+                sourcePath = Path.Combine(_rawConfigPath, _configName);
+            }
+            else
+            {
+                sourcePath = args[1];
+            }
             string targetPath = Path.Combine(_configPath, _configName);
             string resultingPath = Path.Combine(_configPath, _resultingConfigNane);
 
@@ -108,6 +154,7 @@ No input is required if the config file is in the default location being $USERPR
             if (File.Exists(resultingPath))
             {
                 Console.WriteLine("File exists: {0}. Tunnel possibly already deployed.", resultingPath);
+                Exit(1);
             }
 
             // Check for access permissions to create a file at targetPath
@@ -144,14 +191,17 @@ No input is required if the config file is in the default location being $USERPR
             }
             _key.Close();
 
-            // Block until a satisfactory config file is provided or the program is terminated
-            string _tempInput;
-            string _fallbackInput = sourcePath;
-            while (!File.Exists(sourcePath))
+            if (interactive)
             {
-                Console.Write("Config file path: ");
-                _tempInput = Console.ReadLine();
-                sourcePath = (_tempInput == "") ? _fallbackInput : _tempInput;
+                // Block until a satisfactory config file is provided or the program is terminated
+                string _tempInput;
+                string _fallbackInput = sourcePath;
+                while (!File.Exists(sourcePath))
+                {
+                    Console.Write("Config file path: ");
+                    _tempInput = Console.ReadLine();
+                    sourcePath = (_tempInput == "") ? _fallbackInput : _tempInput;
+                }
             }
 
             // Open the config file and read it as an array of strings

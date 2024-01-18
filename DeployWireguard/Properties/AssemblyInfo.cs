@@ -7,11 +7,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("DeployWireguard")]
-[assembly: AssemblyDescription("This is a part of an MDT task sequence that deploys Wireguard to a Windows 10 machine.")]
+[assembly: AssemblyDescription("This is a part of an MDT task sequence that deploys Wireguard to a Windows 10+ machine.")]
 [assembly: AssemblyConfiguration("Release")]
 [assembly: AssemblyCompany("CGO Finance")]
 [assembly: AssemblyProduct("DeployWireguard")]
-[assembly: AssemblyCopyright("Copyright ©  2023")]
+[assembly: AssemblyCopyright("Copyright ©  2023-2024")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -33,6 +33,6 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.2.*")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.*")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 [assembly: NeutralResourcesLanguage("en")]
