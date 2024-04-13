@@ -65,14 +65,16 @@ If both arguments are specified, the application operates in a non-interactive m
                 {
                     Console.WriteLine("Invalid argument: {0}", args[0]);
                     Console.WriteLine("Endpoint has to be in the format of hostname:port.");
-                    Exit(1);
+                    // Purposeful - avoid deadlock in headless with invalid arguments
+                    Environment.Exit(1);
                 }
                 bool _result = int.TryParse(args[0].Split(':')[1], out int _);
                 if (!_result)
                 {
                     Console.WriteLine("Invalid argument: {0}", args[0]);
                     Console.WriteLine("Port number has to be an integer.");
-                    Exit(1);
+                    // Purposeful - avoid deadlock in headless with invalid arguments
+                    Environment.Exit(1);
                 }
                 else
                 {
@@ -85,7 +87,8 @@ If both arguments are specified, the application operates in a non-interactive m
                 {
                     Console.WriteLine("Invalid argument: {0}", args[1]);
                     Console.WriteLine("Config file does not exist.");
-                    Exit(1);
+                    // Purposeful - avoid deadlock in headless with invalid arguments
+                    Environment.Exit(1);
                 }
                 else
                 {
